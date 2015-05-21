@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import jx86.lang.*;
+import jx86.lang.Instruction.RegRegOp;
 import whilelang.lang.*;
 import whilelang.util.*;
 
@@ -605,6 +606,11 @@ public class X86FileWriter {
 			X86File.Code code, X86File.Data data) {
 		
 		List<Instruction> instructions = code.instructions;
+		String label = freshLabel();
+		Type type = e.attribute(Attribute.Type.class).type;
+		addTypeConstant(type, label, data);
+		
+		instructions.add(new Instruction.RegReg(RegRegOp.mov ,HSP , target));
 		// TODO: implement me!
 	}
 
