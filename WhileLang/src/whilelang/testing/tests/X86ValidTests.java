@@ -56,7 +56,7 @@ public class X86ValidTests extends TestHarness {
 				System.err
 				.println("============================================================");
 				fail("Problem running gcc to compile test");
-			} 
+			}
 		} catch (Exception ex) {
 			ex.printStackTrace();
 			fail("Problem running gcc to compile test");
@@ -85,12 +85,16 @@ public class X86ValidTests extends TestHarness {
 			return null;
 		}
 	}
-	
-	@Test
-	public void BoolAssign_Valid_1() {
-		runX86Test("BoolAssign_Valid_1");
-	}
 
+//	@Test
+//	public void BoolAssign_Valid_1() {
+//		runX86Test("BoolAssign_Valid_1");
+//	}
+//	@Test
+//	public void baseline() {
+//		runX86Test("baseline");
+//	}
+//
 //	@Test
 //	public void BoolAssign_Valid_2() {
 //		runX86Test("BoolAssign_Valid_2");
@@ -175,12 +179,12 @@ public class X86ValidTests extends TestHarness {
 //	public void Char_Valid_3() {
 //		runX86Test("Char_Valid_3");
 //	}
-//
-//	@Test
-//	public void Const_Valid_1() {
-//		runX86Test("Const_Valid_1");
-//	}
-//
+
+	@Test
+	public void Const_Valid_1() {
+		runX86Test("Const_Valid_1");
+	}
+
 //	@Test
 //	public void Const_Valid_2() {
 //		runX86Test("Const_Valid_2");

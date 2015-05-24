@@ -19,7 +19,9 @@
 package whilelang;
 
 import java.util.*;
+
 import whilelang.lang.*;
+import whilelang.util.Attribute;
 import whilelang.util.Pair;
 import static whilelang.util.SyntaxError.*;
 
@@ -28,22 +30,27 @@ import static whilelang.util.SyntaxError.*;
  * Abstract Syntax Tree form directly. The interpreter is not designed to be
  * efficient in anyway, however it's purpose is to provide a reference
  * implementation for the language.
- * 
+ *
  * @author David J. Pearce
- * 
+ *
  */
 public class Interpreter {
 	private HashMap<String, WhileFile.Decl> declarations;
+    private HashMap<String, Expr.Constant> constants;
 	private WhileFile file;
-	
+
 	public void run(WhileFile wf) {
 		// First, initialise the map of declaration names to their bodies.
 		declarations = new HashMap<String,WhileFile.Decl>();
 		for(WhileFile.Decl decl : wf.declarations) {
 			declarations.put(decl.name(), decl);
+            if (decl instanceof WhileFile.ConstDecl) {
+                processConstantDeclaration(decl.name(),
+                        (Expr) ((WhileFile.ConstDecl) decl).constant);
+            }
 		}
 		this.file = wf;
-		
+
 		// Second, pick the main method (if one exits) and execute it
 		WhileFile.Decl main = declarations.get("main");
 		if(main instanceof WhileFile.FunDecl) {
@@ -53,25 +60,47 @@ public class Interpreter {
 			System.out.println("Cannot find a main() function");
 		}
 	}
-	
+
+
+    private void processConstantDeclaration(String name, Expr expr) {
+        Attribute[] atts = {};
+        if (expr instanceof Expr.Constant) {
+            expr = (Expr.Constant) expr;
+        }
+
+        processConstantDeclaration(name, expr, atts);
+    }
+
+    @SuppressWarnings("unused")
+    private void processConstantDeclaration(String name,
+            Expr.Constant constant, Attribute[] atts) {
+        constants.put(name, new Expr.Constant(constant.getValue(), atts));
+    }
+
+    private void processConstantDeclaration(String name, Expr expr,
+            Attribute[] atts) {
+        constants.put(name, new Expr.Constant(execute(expr, null), atts));
+    }
+
+
 	/**
 	 * Execute a given function with the given argument values. If the number of
 	 * arguments is incorrect, then an exception is thrown.
-	 * 
+	 *
 	 * @param function
 	 *            Function declaration to execute.
 	 * @param arguments
 	 *            Array of argument values.
 	 */
 	private Object execute(WhileFile.FunDecl function, Object... arguments) {
-		
+
 		// First, sanity check the number of arguments
 		if(function.parameters.size() != arguments.length){
 			throw new RuntimeException(
 					"invalid number of arguments supplied to execution of function \""
 							+ function.name + "\"");
 		}
-		
+
 		// Second, construct the stack frame in which this function will
 		// execute.
 		HashMap<String,Object> frame = new HashMap<String,Object>();
@@ -79,31 +108,31 @@ public class Interpreter {
 			WhileFile.Parameter parameter = function.parameters.get(i);
 			frame.put(parameter.name,arguments[i]);
 		}
-		
+
 		// Third, execute the function body!
 		return execute(function.statements,frame);
 	}
-	
+
 	private Object execute(List<Stmt> block, HashMap<String,Object> frame) {
-		for(int i=0;i!=block.size();i=i+1) {			
-			Object r = execute(block.get(i),frame);			
+		for(int i=0;i!=block.size();i=i+1) {
+			Object r = execute(block.get(i),frame);
 			if(r != null) {
 				return r;
 			}
 		}
 		return null;
 	}
-	
+
 	/**
 	 * Execute a given statement in a given stack frame.
-	 * 
+	 *
 	 * @param stmt
 	 *            Statement to execute.
 	 * @param frame
 	 *            Stack frame mapping variables to their current value.
 	 * @return
 	 */
-	private Object execute(Stmt stmt, HashMap<String,Object> frame) {		
+	private Object execute(Stmt stmt, HashMap<String,Object> frame) {
 		if(stmt instanceof Stmt.Assign) {
 			return execute((Stmt.Assign) stmt,frame);
 		} else if(stmt instanceof Stmt.For) {
@@ -123,10 +152,10 @@ public class Interpreter {
 		} else {
 			internalFailure("unknown statement encountered (" + stmt + ")", file.filename,stmt);
 			return null;
-		} 
+		}
 	}
-	
-	private Object execute(Stmt.Assign stmt, HashMap<String,Object> frame) {	
+
+	private Object execute(Stmt.Assign stmt, HashMap<String,Object> frame) {
 		Expr lhs = stmt.getLhs();
 		if(lhs instanceof Expr.Variable) {
 			Expr.Variable ev = (Expr.Variable) lhs;
@@ -152,10 +181,10 @@ public class Interpreter {
 		} else {
 			internalFailure("unknown lval encountered (" + lhs + ")", file.filename,stmt);
 		}
-		
+
 		return null;
 	}
-	
+
 	private Object execute(Stmt.For stmt, HashMap<String,Object> frame) {
 		execute(stmt.getDeclaration(),frame);
 		while((Boolean) execute(stmt.getCondition(),frame)) {
@@ -167,7 +196,7 @@ public class Interpreter {
 		}
 		return null;
 	}
-	
+
 	private Object execute(Stmt.While stmt, HashMap<String,Object> frame) {
 		while((Boolean) execute(stmt.getCondition(),frame)) {
 			Object ret = execute(stmt.getBody(),frame);
@@ -177,7 +206,7 @@ public class Interpreter {
 		}
 		return null;
 	}
-	
+
 	private Object execute(Stmt.IfElse stmt, HashMap<String,Object> frame) {
 		boolean condition = (Boolean) execute(stmt.getCondition(),frame);
 		if(condition) {
@@ -186,7 +215,7 @@ public class Interpreter {
 			return execute(stmt.getFalseBranch(),frame);
 		}
 	}
-	
+
 	private Object execute(Stmt.Return stmt, HashMap<String,Object> frame) {
 		Expr re = stmt.getExpr();
 		if(re != null) {
@@ -195,7 +224,7 @@ public class Interpreter {
 			return Collections.EMPTY_SET; // used to indicate a function has returned
 		}
 	}
-	
+
 	private Object execute(Stmt.VariableDeclaration stmt,
 			HashMap<String, Object> frame) {
 		Expr re = stmt.getExpr();
@@ -211,16 +240,16 @@ public class Interpreter {
 		frame.put(stmt.getName(), deepClone(value));
 		return null;
 	}
-	
+
 	private Object execute(Stmt.Print stmt, HashMap<String,Object> frame) {
 		String str = toString(execute(stmt.getExpr(),frame));
 		System.out.println(str);
 		return null;
 	}
-	
+
 	/**
 	 * Execute a given expression in a given stack frame.
-	 * 
+	 *
 	 * @param expr
 	 *            Expression to execute.
 	 * @param frame
@@ -228,6 +257,9 @@ public class Interpreter {
 	 * @return
 	 */
 	private Object execute(Expr expr, HashMap<String,Object> frame) {
+        if (exprVariableIsConstant(expr)) {
+            expr = constants.get(expr.toString());
+        }
 		if(expr instanceof Expr.Binary) {
 			return execute((Expr.Binary) expr,frame);
 		} else if(expr instanceof Expr.Cast) {
@@ -251,23 +283,27 @@ public class Interpreter {
 		} else {
 			internalFailure("unknown expression encountered (" + expr + ")", file.filename,expr);
 			return null;
-		} 
+		}
 	}
-	
+
+    private boolean exprVariableIsConstant(Expr expr) {
+        return constants.containsKey(expr.toString());
+    }
+
 	private Object execute(Expr.Binary expr, HashMap<String,Object> frame) {
 		// First, deal with the short-circuiting operators first
 		Object lhs = execute(expr.getLhs(), frame);
-		
+
 		switch (expr.getOp()) {
 		case AND:
 			return ((Boolean)lhs) && ((Boolean)execute(expr.getRhs(), frame));
 		case OR:
 			return ((Boolean)lhs) || ((Boolean)execute(expr.getRhs(), frame));
 		}
-		
-		// Second, deal the rest.		
+
+		// Second, deal the rest.
 		Object rhs = execute(expr.getRhs(), frame);
-		
+
 		switch (expr.getOp()) {
 		case ADD:
 			if(lhs instanceof Integer) {
@@ -345,17 +381,17 @@ public class Interpreter {
 				file.filename, expr);
 		return null;
 	}
-	
+
 	private Object execute(Expr.Cast expr, HashMap<String, Object> frame) {
-		Object rhs = execute(expr.getSource(), frame);		
+		Object rhs = execute(expr.getSource(), frame);
 		// TODO: we need to actually implement casting here!
 		return rhs;
 	}
-	
+
 	private Object execute(Expr.Constant expr, HashMap<String,Object> frame) {
 		return expr.getValue();
 	}
-	
+
 	private Object execute(Expr.Invoke expr, HashMap<String, Object> frame) {
 		List<Expr> arguments = expr.getArguments();
 		Object[] values = new Object[arguments.size()];
@@ -368,7 +404,7 @@ public class Interpreter {
 				.getName());
 		return execute(fun, values);
 	}
-	
+
 	private Object execute(Expr.IndexOf expr, HashMap<String,Object> frame) {
 		Object _src = execute(expr.getSource(),frame);
 		int idx = (Integer) execute(expr.getIndex(),frame);
@@ -380,7 +416,7 @@ public class Interpreter {
 			return src.get(idx);
 		}
 	}
-	
+
 	private Object execute(Expr.ListConstructor expr,
 			HashMap<String, Object> frame) {
 		List<Expr> es = expr.getArguments();
@@ -390,23 +426,23 @@ public class Interpreter {
 		}
 		return ls;
 	}
-	
+
 	private Object execute(Expr.RecordAccess expr, HashMap<String, Object> frame) {
 		HashMap<String, Object> src = (HashMap) execute(expr.getSource(), frame);
 		return src.get(expr.getName());
 	}
-	
+
 	private Object execute(Expr.RecordConstructor expr, HashMap<String,Object> frame) {
 		List<Pair<String,Expr>> es = expr.getFields();
 		HashMap<String,Object> rs = new HashMap<String,Object>();
-		
+
 		for(Pair<String,Expr> e : es) {
 			rs.put(e.first(),execute(e.second(),frame));
 		}
-		
+
 		return rs;
 	}
-	
+
 	private Object execute(Expr.Unary expr, HashMap<String, Object> frame) {
 		Object value = execute(expr.getExpr(), frame);
 		switch (expr.getOp()) {
@@ -430,18 +466,18 @@ public class Interpreter {
 				file.filename, expr);
 		return null;
 	}
-	
+
 	private Object execute(Expr.Variable expr, HashMap<String,Object> frame) {
 		return frame.get(expr.getName());
 	}
-	
+
 	/**
 	 * Perform a deep clone of the given object value. This is either a
 	 * <code>Boolean</code>, <code>Integer</code>, <code>Double</code>,
 	 * <code>Character</code>, <code>String</code>, <code>ArrayList</code> (for
 	 * lists) or <code>HaspMap</code> (for records). Only the latter two need to
 	 * be cloned, since the others are immutable.
-	 * 
+	 *
 	 * @param o
 	 * @return
 	 */
@@ -465,14 +501,14 @@ public class Interpreter {
 			return o;
 		}
 	}
-	
+
 	/**
 	 * Convert the given object value to a string. This is either a
 	 * <code>Boolean</code>, <code>Integer</code>, <code>Double</code>,
 	 * <code>Character</code>, <code>String</code>, <code>ArrayList</code> (for
 	 * lists) or <code>HaspMap</code> (for records). The latter two must be
 	 * treated recursively.
-	 * 
+	 *
 	 * @param o
 	 * @return
 	 */

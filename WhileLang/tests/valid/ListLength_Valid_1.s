@@ -3,16 +3,17 @@
 wl_main:
 	pushq %rbp
 	movq %rsp, %rbp
-	subq $0, %rsp
-	movq %rsp, %rdi
-	leaq label2(%rip), %rsi
-	call _print
+	subq $8, %rsp
+	movq 0(%rdi), %rax
+	movq %rax, -8(%rbp)
+	leaq label1(%rip), %rsi
+	call print
 label0:
 	movq %rbp, %rsp
 	popq %rbp
 	ret
-	.globl _main
-_main:
+	.globl main
+main:
 	pushq %rbp
 	call wl_main
 	popq %rbp
@@ -20,6 +21,4 @@ _main:
 
 	.data
 label1:
-	.quad 5
-label2:
-	.quad 5
+	.quad 3

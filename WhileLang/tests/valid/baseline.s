@@ -3,16 +3,9 @@
 wl_main:
 	pushq %rbp
 	movq %rsp, %rbp
-	subq $8, %rsp
+	subq $0, %rsp
 	leaq label1, %rdi
-	movq %rdi, -8(%rbp)
-	movq -8(%rbp), %rdi
 	leaq label2(%rip), %rsi
-	call print
-	leaq label3, %rdi
-	movq %rdi, -8(%rbp)
-	movq -8(%rbp), %rdi
-	leaq label4(%rip), %rsi
 	call print
 label0:
 	movq %rbp, %rsp
@@ -27,10 +20,6 @@ main:
 
 	.data
 label1:
-	.quad 1
+	.asciz "hello world"
 label2:
-	.quad 1
-label3:
-	.quad 1
-label4:
-	.quad 1
+	.quad 5

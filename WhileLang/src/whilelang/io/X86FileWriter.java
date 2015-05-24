@@ -8,6 +8,9 @@ import java.util.List;
 import java.util.Map;
 
 import jx86.lang.*;
+import jx86.lang.Instruction.AddrOp;
+import jx86.lang.Instruction.AddrRegOp;
+import jx86.lang.Instruction.AddrRegRegOp;
 import jx86.lang.Instruction.RegRegOp;
 import whilelang.lang.*;
 import whilelang.util.*;
@@ -608,12 +611,12 @@ public class X86FileWriter {
 		List<Instruction> instructions = code.instructions;
 		String label = freshLabel();
 		Type type = e.attribute(Attribute.Type.class).type;
-		addTypeConstant(type, label, data);
-		Register to = freeRegisters.get(0);
+		addDataConstant(e, label, data);
 
-//		instructions.add(new Instruction.RegReg(RegRegOp.mov ,target ,to ));
-		// TODO: implement me!
+		instructions.add(new Instruction.AddrReg(AddrRegOp.lea, label, target));
 	}
+
+
 
 	public void translate(Expr.Cast e, Register target,
 			List<Register> freeRegisters, Map<String, Integer> localVariables,
@@ -1212,6 +1215,26 @@ public class X86FileWriter {
 			throw new IllegalArgumentException("Unknown architecture encountered");
 		}
 
+		data.constants.add(item);
+	}
+
+	private void addDataConstant(whilelang.lang.Expr e, String label, X86File.Data data){
+		if(e.attribute(Attribute.Type.class).type instanceof Type.Strung){
+			addStringConstant((Expr.Constant) e, label, data);
+		}
+		else if(e.attribute(Attribute.Type.class).type instanceof Type.Bool){
+			addBooleanConstant((Expr.Constant) e, label, data);
+		}
+		System.out.println(e);
+	}
+
+	private void addStringConstant(whilelang.lang.Expr.Constant e, String label, X86File.Data data ) {
+		Constant item = new Constant.String(label, (String) e.getValue());
+		data.constants.add(item);
+	}
+
+	private void addBooleanConstant(whilelang.lang.Expr.Constant e, String label, X86File.Data data ) {
+		Constant item = new Constant.Word(label,  (Integer) e.getValue());
 		data.constants.add(item);
 	}
 

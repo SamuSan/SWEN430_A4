@@ -5,11 +5,10 @@ wl_main:
 	movq %rsp, %rbp
 	subq $8, %rsp
 	leaq label1, %rdi
-	movq %rdi, -8(%rbp)
-	movq -8(%rbp), %rdi
-	leaq label2(%rip), %rsi
-	call print
-	leaq label3, %rdi
+	leaq label2, %rbx
+	imulq %rbx, %rdi
+	leaq label3, %rbx
+	addq %rbx, %rdi
 	movq %rdi, -8(%rbp)
 	movq -8(%rbp), %rdi
 	leaq label4(%rip), %rsi
@@ -26,11 +25,5 @@ main:
 	ret
 
 	.data
-label1:
-	.quad 1
-label2:
-	.quad 1
-label3:
-	.quad 1
 label4:
-	.quad 1
+	.quad 3
