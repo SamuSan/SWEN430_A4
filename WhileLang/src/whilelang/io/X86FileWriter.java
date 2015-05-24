@@ -21,7 +21,7 @@ public class X86FileWriter {
 	private final jx86.lang.Target target;
 	private HashMap<String, WhileFile.FunDecl> functions;
 	private HashMap<String,WhileFile.TypeDecl> types;
-	
+
 	// ==========================================
 	// Constructors
 	// ==========================================
@@ -60,7 +60,7 @@ public class X86FileWriter {
 
 		this.functions = new HashMap<String, WhileFile.FunDecl>();
 		this.types = new HashMap<String,WhileFile.TypeDecl>();
-		
+
 		for (WhileFile.Decl declaration : wf.declarations) {
 			if (declaration instanceof WhileFile.FunDecl) {
 				WhileFile.FunDecl fd = (WhileFile.FunDecl) declaration;
@@ -89,7 +89,7 @@ public class X86FileWriter {
 	/**
 	 * Translate a given function declaration into a sequence of assembly
 	 * language instructions.
-	 * 
+	 *
 	 * @param fd
 	 *            Function Declaration to translate.
 	 * @param code
@@ -113,13 +113,13 @@ public class X86FileWriter {
 		// the stack. Parameters are passed on the stack by the caller.
 		HashMap<String, Integer> localVariables = new HashMap<String, Integer>();
 		int widthOfLocals = allocateStackFrame(fd, localVariables);
-		
+
 		// Create the label for return statements. This is the point where
 		// return statements will branch to, so we can avoid repeating the code
 		// necessary for restoring the stack.
 		int exitLabel = labelIndex++;
 		localVariables.put("$$", exitLabel); // sneaky
-		
+
 		// Create space for the stack frame, which consists of the local
 		// variables.
 		instructions.add(new Instruction.ImmReg(Instruction.ImmRegOp.sub,
@@ -130,7 +130,7 @@ public class X86FileWriter {
 
 		// Add the return label
 		instructions.add(new Instruction.Label("label"+exitLabel));
-		
+
 		// Restore stack pointer
 		instructions.add(new Instruction.RegReg(Instruction.RegRegOp.mov, HBP,
 				HSP));
@@ -146,7 +146,7 @@ public class X86FileWriter {
 	 * Translate a list of While statements into their corresponding machine
 	 * code instructions. Observe that we implicitly assume all registers are
 	 * available for use between statements.
-	 * 
+	 *
 	 * @param statements
 	 * @param code
 	 */
@@ -162,7 +162,7 @@ public class X86FileWriter {
 	 * Translate a given While statement into its corresponding corresponding
 	 * machine code instructions. Observe that we implicitly assume all
 	 * registers are available for use between statements.
-	 * 
+	 *
 	 * @param statement
 	 *            Statement to be translated
 	 * @param code
@@ -208,7 +208,7 @@ public class X86FileWriter {
 		// Translate assignment from HDI to left-hand side
 		if (lhs instanceof Expr.Variable) {
 			Expr.Variable v = (Expr.Variable) lhs;
-			
+
 			// Determine the offset within the stack of this local variable.
 			int offset = localVariables.get(v.getName());
 
@@ -218,14 +218,14 @@ public class X86FileWriter {
 
 			// Implement the assignment
 			writeToStack(type,HDI,HBP,offset,code,data);
-			
+
 		} else if (lhs instanceof Expr.RecordAccess) {
 			Expr.RecordAccess v = (Expr.RecordAccess) lhs;
-			
+
 			// First, determine the field offset
 			Type.Record type = (Type.Record) unwrap(v.getSource().attribute(Attribute.Type.class).type);
 			int offset = determineFieldOffset(type,v.getName());
-		
+
 			// Translate source expression to give pointer to structure.
 			translate(v.getSource(), HSI, new ArrayList<Register>(
 					REGISTER_POOL), localVariables, code, data);
@@ -233,7 +233,7 @@ public class X86FileWriter {
 			// Finally, perform indirect write
 			instructions.add(new Instruction.RegImmInd(
 					Instruction.RegImmIndOp.mov, HDI, offset, HSI));
-			
+
 		} else if (lhs instanceof Expr.IndexOf) {
 			Expr.IndexOf v = (Expr.IndexOf) lhs;
 		}
@@ -243,9 +243,9 @@ public class X86FileWriter {
 			Map<String, Integer> localVariables, X86File.Code code,
 			X86File.Data data) {
 		List<Instruction> instructions = code.instructions;
-		String headLabel = freshLabel(); 
+		String headLabel = freshLabel();
 		String exitLabel = freshLabel();
-		
+
 		// 1. Translate Variable Declaration
 		translate(statement.getDeclaration(), localVariables, code, data);
 
@@ -259,7 +259,7 @@ public class X86FileWriter {
 
 		// 3. Translate Loop Body
 		translate(statement.getBody(), localVariables, code, data);
-		
+
 		// 4. Translate Increment and loop around
 		translate(statement.getIncrement(), localVariables, code, data);
 		instructions.add(new Instruction.Addr(Instruction.AddrOp.jmp, headLabel));
@@ -272,7 +272,7 @@ public class X86FileWriter {
 			Map<String, Integer> localVariables, X86File.Code code,
 			X86File.Data data) {
 		List<Instruction> instructions = code.instructions;
-		
+
 	}
 
 	public void translate(Stmt.Print statement,
@@ -287,15 +287,15 @@ public class X86FileWriter {
 		// Determine type of expression so as to determine appropriate print
 		// call.
 		Type type = statement.getExpr().attribute(Attribute.Type.class).type;
-				
+
 		String typeLabel = freshLabel();
 		addTypeConstant(type,typeLabel,data);
-		
+
 		instructions.add(new Instruction.AddrRegReg(Instruction.AddrRegRegOp.lea,
 				typeLabel, HIP, HSI));
 
 		instructions
-				.add(new Instruction.Addr(Instruction.AddrOp.call, "_print"));
+				.add(new Instruction.Addr(Instruction.AddrOp.call, publicLabel("print")));
 	}
 
 	public void translate(Stmt.Return statement,
@@ -354,11 +354,11 @@ public class X86FileWriter {
 			Map<String, Integer> localVariables, X86File.Code code,
 			X86File.Data data) {
 		List<Instruction> instructions = code.instructions;
-		String headLabel = freshLabel(); 
+		String headLabel = freshLabel();
 		String exitLabel = freshLabel();
-		
+
 		instructions.add(new Instruction.Label(headLabel));
-		
+
 		// Translate the condition expression and load result into HDI register
 		translate(statement.getCondition(), HDI, new ArrayList<Register>(
 				REGISTER_POOL), localVariables, code, data);
@@ -380,7 +380,7 @@ public class X86FileWriter {
 	 * target register or, if that is null, on the stack. The set of free
 	 * registers is provided to identify the pool from which target registers
 	 * can be taken.
-	 * 
+	 *
 	 * @param expression
 	 *            Expression to be translated.
 	 * @param target
@@ -443,7 +443,7 @@ public class X86FileWriter {
 		List<Instruction> instructions = code.instructions;
 		Type lhsType = e.getLhs().attribute(Attribute.Type.class).type;
 		Type rhsType = e.getRhs().attribute(Attribute.Type.class).type;
-		
+
 		// First, translate lhs and store result in the target register.
 		translate(e.getLhs(), target, freeRegisters, localVariables, code, data);
 
@@ -501,7 +501,7 @@ public class X86FileWriter {
 			// the hdx:has register pairing (where hdx = remainder, hax = quotient).
 			instructions.add(new Instruction.RegReg(Instruction.RegRegOp.mov,
 					target, HAX));
-			// TODO: I'm not completely sure why we need this!			
+			// TODO: I'm not completely sure why we need this!
 			instructions.add(new Instruction.Unit(Instruction.UnitOp.cltd));
 			// FIXME: this trashes the HDX register which could be in use!
 			instructions.add(new Instruction.Reg(Instruction.RegOp.idiv,
@@ -522,7 +522,7 @@ public class X86FileWriter {
 			String exitLabel = freshLabel();
 			instructions.add(new Instruction.RegReg(Instruction.RegRegOp.cmp, rhsTarget,
 					HDI));
-			
+
 			switch (e.getOp()) {
 			case EQ:
 				// FIXME: problem with compound types
@@ -545,7 +545,7 @@ public class X86FileWriter {
 				instructions.add(new Instruction.Addr(Instruction.AddrOp.jge, trueLabel));
 				break;
 			}
-						
+
 			instructions.add(new Instruction.ImmReg(Instruction.ImmRegOp.mov,
 					0, target));
 			instructions.add(new Instruction.Addr(Instruction.AddrOp.jmp, exitLabel));
@@ -573,7 +573,7 @@ public class X86FileWriter {
 				instructions.add(new Instruction.RegReg(
 						Instruction.RegRegOp.mov, rhsTarget, HSI));
 				String typeLabel = freshLabel();
-				addTypeConstant(rhsType,typeLabel,data);				
+				addTypeConstant(rhsType,typeLabel,data);
 				instructions.add(new Instruction.AddrRegReg(Instruction.AddrRegRegOp.lea,
 						typeLabel, HIP, HDX));
 				instructions.add(new Instruction.Addr(Instruction.AddrOp.call, "_str_left_append"));
@@ -586,7 +586,7 @@ public class X86FileWriter {
 				instructions.add(new Instruction.RegReg(
 						Instruction.RegRegOp.mov, rhsTarget, HSI));
 				String typeLabel = freshLabel();
-				addTypeConstant(lhsType,typeLabel,data);				
+				addTypeConstant(lhsType,typeLabel,data);
 				instructions.add(new Instruction.AddrRegReg(Instruction.AddrRegRegOp.lea,
 						typeLabel, HIP, HDX));
 				instructions.add(new Instruction.Addr(Instruction.AddrOp.call, "_str_right_append"));
@@ -604,13 +604,13 @@ public class X86FileWriter {
 	public void translate(Expr.Constant e, Register target,
 			List<Register> freeRegisters, Map<String, Integer> localVariables,
 			X86File.Code code, X86File.Data data) {
-		
+
 		List<Instruction> instructions = code.instructions;
 		String label = freshLabel();
 		Type type = e.attribute(Attribute.Type.class).type;
 		addTypeConstant(type, label, data);
 		Register to = freeRegisters.get(0);
-		
+
 //		instructions.add(new Instruction.RegReg(RegRegOp.mov ,target ,to ));
 		// TODO: implement me!
 	}
@@ -651,20 +651,20 @@ public class X86FileWriter {
 			Expr argument = arguments.get(i);
 			translate(argument, target, freeRegisters, localVariables, code,
 					data);
-			offset -= determineWidth(parameter.type);			
-			writeToStack(parameter.type,target,HSP,offset,code,data);		
+			offset -= determineWidth(parameter.type);
+			writeToStack(parameter.type,target,HSP,offset,code,data);
 		}
 
 		// Fourth, actually invoke the function
 		String fn_name = "wl_" + fd.name;
 		instructions.add(new Instruction.Addr(Instruction.AddrOp.call, fn_name));
-		
+
 		if (!(fd.ret instanceof Type.Void)) {
 			// Fifth, extract the return value
 			offset -= determineWidth(fd.ret);
-			readFromStack(fd.ret,HSP,offset,target,code,data);			
+			readFromStack(fd.ret,HSP,offset,target,code,data);
 		}
-		
+
 		// In principle, we'd like to return the stack pointer to its original
 		// position here. However, in the case of a compound data type who's
 		// address has been take we can't.
@@ -682,29 +682,29 @@ public class X86FileWriter {
 			List<Register> freeRegisters, Map<String, Integer> localVariables,
 			X86File.Code code, X86File.Data data) {
 		List<Instruction> instructions = code.instructions;
-		
+
 		// First, determine the field offset
 		Type.Record type = (Type.Record) unwrap(e.getSource().attribute(Attribute.Type.class).type);
 		int offset = determineFieldOffset(type,e.getName());
-				
+
 		// Second, translate source expression
 		translate(e.getSource(), target, freeRegisters, localVariables, code, data);
-		
+
 		// Finally, perform indirect read
 		instructions.add(new Instruction.ImmIndReg(Instruction.ImmIndRegOp.mov,
 				offset, target, target));
 	}
-	
+
 	public void translate(Expr.RecordConstructor e, Register target,
 			List<Register> freeRegisters, Map<String, Integer> localVariables,
 			X86File.Code code, X86File.Data data) {
 		List<Instruction> instructions = code.instructions;
-		
+
 		// First, get fields in sorted order!
 		ArrayList<Pair<String, Expr>> fields = new ArrayList<Pair<String, Expr>>(
 				e.getFields());
 		sortFields(fields);
-				
+
 		// Create space on the stack for the resulting record
 		Type.Record type = (Type.Record) unwrap(e.attribute(Attribute.Type.class).type);
 		int width = determineWidth(type);
@@ -713,20 +713,20 @@ public class X86FileWriter {
 		// variables.
 		instructions.add(new Instruction.ImmReg(Instruction.ImmRegOp.sub,
 				paddedWidth, HSP));
-		
+
 		// Second, translate fields in the appropriate order and push them onto
 		// the stack in their appropriate order. This is a little tricky because
-		// we need to flatten nested fields appropriately.	
+		// we need to flatten nested fields appropriately.
 		int offset = paddedWidth;
 		for (int i = fields.size()-1; i >= 0; --i) {
-			Pair<String,Expr> p = fields.get(i);			
+			Pair<String,Expr> p = fields.get(i);
 			translate(p.second(), target, freeRegisters, localVariables, code, data);
 			// Implement the assignment
 			offset -= determineWidth(type.getFields().get(p.first()));
 			writeToStack(type.getFields().get(p.first()), HDI, HSP, offset,
 					code, data);
 		}
-		
+
 		// Finally, create the target pointer from the stack pointer
 		instructions.add(new Instruction.RegReg(Instruction.RegRegOp.mov, HSP,
 				target));
@@ -746,7 +746,7 @@ public class X86FileWriter {
 			}
 		});
 	}
-	
+
 	public void translate(Expr.Unary e, Register target,
 			List<Register> freeRegisters, Map<String, Integer> localVariables,
 			X86File.Code code, X86File.Data data) {
@@ -790,7 +790,7 @@ public class X86FileWriter {
 
 		// Extract the variable's type to help determine which case to handle
 		Type type = e.attribute(Attribute.Type.class).type;
-		
+
 		// Finally, read the target into the target register
 		readFromStack(type,HBP,offset,target,code,data);
 	}
@@ -804,7 +804,7 @@ public class X86FileWriter {
 	 * a base pointer. In the case of a compound value, then the source
 	 * register is a pointer to a memory location and we need to perform an
 	 * indirect copy.
-	 * 
+	 *
 	 * @param type
 	 *            Type of data being assigned
 	 * @param source
@@ -816,16 +816,16 @@ public class X86FileWriter {
 	 */
 	public void writeToStack(Type type, Register source, Register target,
 			int offset, X86File.Code code, X86File.Data data) {
-		
+
 		List<Instruction> instructions = code.instructions;
-				
+
 		// There are two cases we need to consider here: primitive values;
 		// and, compound values. For the former, we write their value directly
 		// from the target register. For the latter, we copy data from a pointer
 		// to their value over the given target.
 
 		type = unwrap(type); // remove named types
-		
+
 		if (type instanceof Type.Bool || type instanceof Type.Char
 				|| type instanceof Type.Int || type instanceof Type.Real
 				|| type instanceof Type.Strung) {
@@ -837,13 +837,13 @@ public class X86FileWriter {
 			// These are compound types. Basically, we just perform a bitwise
 			// copy of each slot.
 			int width = determineWidth(type);
-			
+
 			// Determine the number of slots required (note, width is guaranteed
 			// to be a multiple of the natural word size).
 			int nSlots = width / this.target.widthInBytes();
-			int sourceOffset = width; 
+			int sourceOffset = width;
 			int targetOffset = offset + width;
-			
+
 			for(int i=0;i!=nSlots;++i) {
 				// decrement offset by one slot
 				targetOffset -= this.target.widthInBytes();
@@ -852,18 +852,18 @@ public class X86FileWriter {
 				// register.
 				instructions.add(new Instruction.ImmIndReg(
 						Instruction.ImmIndRegOp.mov, sourceOffset, source, HAX));
-				// Writer temporary register into slot referenced by target register.				
+				// Writer temporary register into slot referenced by target register.
 				instructions.add(new Instruction.RegImmInd(
 						Instruction.RegImmIndOp.mov, HAX, targetOffset, target));
 			}
 		}
 	}
-	
+
 	/**
 	 * Copy a data value to a given register from a stack location offset from a
 	 * base pointer. In the case of a compound value, then we need to store the
 	 * address of the structure into the target register.
-	 * 
+	 *
 	 * @param type
 	 *            Type of data being assigned
 	 * @param source
@@ -872,19 +872,19 @@ public class X86FileWriter {
 	 *            Stack location offset from base pointer to read from
 	 * @param target
 	 *            Register to write data value / pointer to
-	 * 
+	 *
 	 */
 	public void readFromStack(Type type, Register source, int offset,
 			Register target, X86File.Code code, X86File.Data data) {
 		List<Instruction> instructions = code.instructions;
-		
+
 		// There are two cases we need to consider here: primitive values;
 		// and, compound values. For the former, we write their value directly
 		// to the target register. For the latter, we write their address as a
 		// pointer to the target register.
-		
+
 		type = unwrap(type); // remove named types
-		
+
 		if (type instanceof Type.Bool || type instanceof Type.Char
 				|| type instanceof Type.Int || type instanceof Type.Real
 				|| type instanceof Type.Strung) {
@@ -901,7 +901,7 @@ public class X86FileWriter {
 					offset, target));
 		}
 	}
-	
+
 	/**
 	 * <p>
 	 * Allocate every local variable declared in a function to an appropriate
@@ -916,7 +916,7 @@ public class X86FileWriter {
 	 * contribution to an increase in stack size since they are
 	 * caller-allocated.
 	 * </p>
-	 * 
+	 *
 	 * @param function
 	 *            Function for which to create the stack frame
 	 * @param allocation
@@ -931,7 +931,7 @@ public class X86FileWriter {
 		// Also, there maybe some padding of some sort.
 		int offset = determineCallerEnvironmentAlignedWidth(function)
 				+ (target.widthInBytes() * 2);
-		
+
 		List<WhileFile.Parameter> fun_params = function.parameters;
 		for (int i = 0; i < fun_params.size(); i++) {
 			WhileFile.Parameter p = fun_params.get(i);
@@ -944,7 +944,7 @@ public class X86FileWriter {
 			offset -= determineWidth(function.ret);
 			allocation.put("$", offset);
 		}
-		
+
 		// Finally, allocate remaining local variables
 		return allocateStackFrame(function.statements, allocation);
 	}
@@ -959,7 +959,7 @@ public class X86FileWriter {
 		HashMap<String, Type> variables = new HashMap<String, Type>();
 		extractLocalVariableTypes(statements, variables);
 
-		int count = 0; 
+		int count = 0;
 		for (Map.Entry<String, Type> e : variables.entrySet()) {
 			int width = determineWidth(e.getValue());
 			count += width;
@@ -977,7 +977,7 @@ public class X86FileWriter {
 	 * Determine the type of every declared local variable. In cases where we
 	 * have two local variables with the same name but different types, choose
 	 * the physically largest type (in bytes).
-	 * 
+	 *
 	 * @param statements
 	 * @param allocation
 	 */
@@ -998,8 +998,8 @@ public class X86FileWriter {
 				extractLocalVariableTypes(ife.getFalseBranch(), allocation);
 			} else if (stmt instanceof Stmt.For) {
 				Stmt.For fe = (Stmt.For) stmt;
-				
-				// Allocate loop variable 
+
+				// Allocate loop variable
 				Stmt.VariableDeclaration vd = fe.getDeclaration();
 				Type ot = allocation.get(vd.getName());
 				Type nt = vd.getType();
@@ -1007,8 +1007,8 @@ public class X86FileWriter {
 					nt = ot;
 				}
 				allocation.put(vd.getName(), nt);
-				
-				// Explore loop body				
+
+				// Explore loop body
 				extractLocalVariableTypes(fe.getBody(), allocation);
 			} else if (stmt instanceof Stmt.While) {
 				Stmt.While fe = (Stmt.While) stmt;
@@ -1021,7 +1021,7 @@ public class X86FileWriter {
 	 * On some operating systems, the stack must be aligned to a specific
 	 * amount. For example, on x86_64/MacOS it must be aligned to multiples of
 	 * 16 bytes.
-	 * 
+	 *
 	 * @param minimum
 	 *            The minumum number of bytes required for the stack frame to
 	 *            hold all the necessary local variables, etc.
@@ -1044,7 +1044,7 @@ public class X86FileWriter {
 	 * everything to the nearest "natural" word size for the given architecture.
 	 * For example, on x86_64, this function returns 8 for type bool. Obviously,
 	 * this is not the most efficient.
-	 * 
+	 *
 	 * @param type
 	 * @return
 	 */
@@ -1097,7 +1097,7 @@ public class X86FileWriter {
 
 	/**
 	 * Determine the offset of a given field in a given type.
-	 * 
+	 *
 	 * @param e
 	 * @param target
 	 * @param freeRegisters
@@ -1106,14 +1106,14 @@ public class X86FileWriter {
 	 * @param data
 	 */
 	public int determineFieldOffset(Type.Record type, String field) {
-		
+
 		// First, get fields in sorted order!
 		ArrayList<String> fields = new ArrayList<String>();
 		for(Map.Entry<String,Type> entry : type.getFields().entrySet()) {
 			fields.add(entry.getKey());
 		}
 		Collections.sort(fields);
-		
+
 		// Second, calculate offset of field we are reading
 		int offset = determineWidth(type);
 		for (int i = fields.size() - 1; i >= 0; --i) {
@@ -1121,28 +1121,28 @@ public class X86FileWriter {
 			offset -= determineWidth(type.getFields().get(field));
 			if (field.equals(f)) {
 				break;
-			}			
+			}
 		}
-		
+
 		return offset;
 	}
-	
+
 	public Type unwrap(Type type) {
 		if(type instanceof Type.Named) {
-			Type.Named tn = (Type.Named) type; 
+			Type.Named tn = (Type.Named) type;
 			WhileFile.TypeDecl td = types.get(tn.getName());
 			return td.type;
 		} else {
 			return type;
 		}
 	}
-	
+
 	private static int labelIndex = 0;
-	
+
 	public static String freshLabel() {
 		return "label" + labelIndex++;
 	}
-	
+
 	/**
 	 * <p>
 	 * Create a data constant representing a While type. This encodes all
@@ -1153,13 +1153,13 @@ public class X86FileWriter {
 	 * Each type begins with a tag which identifies what kind it is, followed by
 	 * the payload (if applicable) which may contain other nested types.
 	 * </p>
-	 * 
+	 *
 	 * @param type
 	 * @param data
 	 */
 	private void addTypeConstant(Type type, String label, X86File.Data data) {
 		type = unwrap(type);
-		
+
 		if (type instanceof Type.Void) {
 			addNaturalWordConstant(VOID_TAG, label, data);
 		} else if (type instanceof Type.Bool) {
@@ -1175,21 +1175,21 @@ public class X86FileWriter {
 		} else if (type instanceof Type.Record) {
 			Type.Record r = (Type.Record) type;
 			// First, get sorted fields
-			Map<String,Type> fields = r.getFields(); 
+			Map<String,Type> fields = r.getFields();
 			ArrayList<String> fieldNames = new ArrayList<String>(r.getFields().keySet());
-			Collections.sort(fieldNames);			
+			Collections.sort(fieldNames);
 			// Second, write type tag
 			addNaturalWordConstant(RECORD_TAG, label, data);
-			// Third, write the number of fields			
+			// Third, write the number of fields
 			addNaturalWordConstant(fieldNames.size(), null, data);
 			for(String field : fieldNames) {
-				// Fourth, each field consists of a  			
+				// Fourth, each field consists of a
 				addNaturalWordConstant(field.length(), null, data);
 				data.constants.add(new Constant.String(null,field));
 				addTypeConstant(fields.get(field),null,data);
-			}			
+			}
 		} else if (type instanceof Type.List) {
-			Type.List l = (Type.List) type; 
+			Type.List l = (Type.List) type;
 			addNaturalWordConstant(7, label, data);
 			addTypeConstant(l.getElement(),null,data);
 		} else {
@@ -1197,10 +1197,10 @@ public class X86FileWriter {
 					+ type);
 		}
 	}
-	
+
 	private void addNaturalWordConstant(long value, String label, X86File.Data data) {
 		Constant item;
-		
+
 		switch(target.arch) {
 		case X86_32:
 			item = new Constant.Long(label, value);
@@ -1211,21 +1211,21 @@ public class X86FileWriter {
 		default:
 			throw new IllegalArgumentException("Unknown architecture encountered");
 		}
-		
+
 		data.constants.add(item);
 	}
-	
+
 	/**
 	 * Add a standard main method which will be called by the operating system
 	 * when this process is executed. This sequence is operating system
 	 * dependent, and simply calls the translated <code>main()</code> method
 	 * from the original while source file.
-	 * 
+	 *
 	 * @param xf
 	 */
 	private void addMainLauncher(X86File.Code code) {
 		List<Instruction> instructions = code.instructions;
-		instructions.add(new Instruction.Label("_main", 1, true));
+		instructions.add(new Instruction.Label(publicLabel("main"), 1, true));
 		instructions.add(new Instruction.Reg(Instruction.RegOp.push, HBP));
 		instructions.add(new Instruction.Addr(Instruction.AddrOp.call,
 				"wl_main"));
@@ -1233,12 +1233,19 @@ public class X86FileWriter {
 		instructions.add(new Instruction.Unit(Instruction.UnitOp.ret));
 	}
 
+	public String publicLabel(String label) {
+			if(target == Target.MACOS_X86_64) {
+				return "_" + label;
+			} else {
+				return label;
+			}
+		}
 	/**
 	 * Returns the head of a given registers family. For example, on
 	 * <code>x86_64</code> the head of the <code>bx</code> family is
 	 * <code>rbx</code>. Conversely, the head of the <code>bx</code> family is
 	 * <code>ebx</code> on <code>x86_32</code>.
-	 * 
+	 *
 	 * @param register
 	 * @return
 	 */
@@ -1269,7 +1276,7 @@ public class X86FileWriter {
 	private final Register HIP;
 
 	public final List<Register> REGISTER_POOL;
-	
+
 	private final int VOID_TAG = 0;
 	private final int BOOL_TAG = 1;
 	private final int CHAR_TAG = 2;
