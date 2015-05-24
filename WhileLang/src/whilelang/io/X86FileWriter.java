@@ -609,8 +609,9 @@ public class X86FileWriter {
 		String label = freshLabel();
 		Type type = e.attribute(Attribute.Type.class).type;
 		addTypeConstant(type, label, data);
+		Register to = freeRegisters.get(0);
 		
-		instructions.add(new Instruction.RegReg(RegRegOp.mov ,HSP , target));
+//		instructions.add(new Instruction.RegReg(RegRegOp.mov ,target ,to ));
 		// TODO: implement me!
 	}
 
