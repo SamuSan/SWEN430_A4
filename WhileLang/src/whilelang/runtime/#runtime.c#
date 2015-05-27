@@ -26,7 +26,7 @@ int widthof(slot_t *type) {
   switch(tag) {
   case VOID_TAG:
     // void
-          break;
+    break;
   case BOOL_TAG:
   case CHAR_TAG: 
   case INT_TAG: 
@@ -49,7 +49,6 @@ int widthof(slot_t *type) {
       return width;
     }
   }
-    return 0;
 }
 
 void internal_tostring(slot_t *item, slot_t *type, char* buf) {

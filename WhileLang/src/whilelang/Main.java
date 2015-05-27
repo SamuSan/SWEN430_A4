@@ -102,11 +102,11 @@ public class Main {
 				cfw.write(ast);
 				break;
 			case x86:
-				System.out.println("Compiling to X86 Assembly Language...");
+				System.out.println("Compiling to X86 Assembly Language.s..");
 				// First, determine output filename
 				 File asFile = new File(filename.substring(0,filename.lastIndexOf('.')) + ".s");
 				// Second, build the x86 file
-				 X86File xf = new X86FileWriter(Target.LINUX_X86_64).build(ast);
+				 X86File xf = new X86FileWriter(Target.MACOS_X86_64).build(ast);
 				// Third, write that file in GAS compatible assembly language
 				 AsmFileWriter afw = new AsmFileWriter(asFile);
 				 afw.write(xf);

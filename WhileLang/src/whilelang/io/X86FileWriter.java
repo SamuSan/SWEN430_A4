@@ -613,7 +613,7 @@ public class X86FileWriter {
 		Type type = e.attribute(Attribute.Type.class).type;
 		addDataConstant(e, label, data);
 
-		instructions.add(new Instruction.AddrReg(AddrRegOp.lea, label, target));
+		instructions.add(new Instruction.AddrRegReg(AddrRegRegOp.lea, label, HIP, target));
 	}
 
 

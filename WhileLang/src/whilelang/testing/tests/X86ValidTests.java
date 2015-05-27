@@ -90,10 +90,10 @@ public class X86ValidTests extends TestHarness {
 //	public void BoolAssign_Valid_1() {
 //		runX86Test("BoolAssign_Valid_1");
 //	}
-//	@Test
-//	public void baseline() {
-//		runX86Test("baseline");
-//	}
+	@Test
+	public void baseline() {
+		runX86Test("baseline");
+	}
 //
 //	@Test
 //	public void BoolAssign_Valid_2() {
@@ -180,25 +180,7 @@ public class X86ValidTests extends TestHarness {
 //		runX86Test("Char_Valid_3");
 //	}
 
-	@Test
-	public void Const_Valid_1() {
-		runX86Test("Const_Valid_1");
-	}
-
-//	@Test
-//	public void Const_Valid_2() {
-//		runX86Test("Const_Valid_2");
-//	}
-//
-//	@Test
-//	public void Const_Valid_3() {
-//		runX86Test("Const_Valid_3");
-//	}
-//
-//	@Test
-//	public void Const_Valid_4() {
-//		runX86Test("Const_Valid_4");
-//	}
+//Killed a bunch here
 //
 //	@Test
 //	public void Define_Valid_1() {
